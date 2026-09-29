@@ -137,7 +137,7 @@ int main() {
 // Valida a entrada do usuário para garantir que seja um número inteiro.//
         if (cin.fail()) {
             cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');            continue
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');            continue;
             cout << "\n[!] Entrada invalida! Digite um numero de 1 a 6." << endl;
 ;
         }// Executa a operação correspondente à opção escolhida.//
