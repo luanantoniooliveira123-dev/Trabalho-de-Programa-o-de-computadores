@@ -1,0 +1,270 @@
+// ============================================================================
+// Disciplina: INF101 - Programacao de Computadores I.
+// Professor: Anderson R. Lamas.
+// Aluno: Luan Antonio De Oliveira Silva. Matricula: 28286.
+// Trabalho Pratico - Etapa 2: Registro e Gestao de Contas Bancarias com Movimentacoes.
+// ============================================================================
+#include <iostream>
+#include <string>
+#include <limits>
+using namespace std;
+const int MAX_CONTAS = 100;
+const int MAX_MOVIMENTACOES = 500;
+// Arrays globais
+int numeroConta[MAX_CONTAS];
+string nomeCliente[MAX_CONTAS], cpf[MAX_CONTAS];
+int tipoConta[MAX_CONTAS];
+double saldo[MAX_CONTAS];
+bool contaAtiva[MAX_CONTAS];
+int totalContas = 0;
+int contaMovimentacao[MAX_MOVIMENTACOES];
+char tipoMovimentacao[MAX_MOVIMENTACOES];
+double valorMovimentacao[MAX_MOVIMENTACOES];
+int quantidadeMovimentacoes = 0;
+// Funções utilitárias e de validação
+int lerInt(string msg, bool (*valido)(int), string erro) {
+    int v;
+    do {
+        cout << msg;
+        cin >> v;
+        if (!valido(v)) cout << "[!] " << erro << endl;
+    } while (!valido(v));
+    return v;
+}
+bool maiorQueZero(int v) { return v > 0; }
+bool tipoValido(int v) { return v == 1 || v == 2; }
+bool binario(int v) { return v == 0 || v == 1; }
+int buscarConta(int numero) {
+    for (int i = 0; i < totalContas; i++)
+        if (numeroConta[i] == numero) return i;
+    return -1;
+}
+string strTipo(int t) { return t == 1 ? "Corrente" : "Poupanca"; }
+string strStatus(bool a) { return a ? "Ativa" : "Inativa"; }
+bool verificarContas(int min = 1) {
+    if (totalContas < min) {
+        cout << "\n[!] " << (min > 1 ? "Sao necessarias pelo menos 2 contas cadastradas." : "Nenhuma conta cadastrada.") << endl;
+        return false;
+    }
+    return true;
+}
+int pedirIndiceExistente() {
+    int num;
+    cout << "Digite o numero da conta: ";
+    cin >> num;
+    int i = buscarConta(num);
+    if (i == -1) cout << "\n[!] Conta nao encontrada!" << endl;
+    return i;
+}
+void registrarMovimentacao(int numConta, char tipo, double valor) {
+    if (quantidadeMovimentacoes < MAX_MOVIMENTACOES) {
+        contaMovimentacao[quantidadeMovimentacoes] = numConta;
+        tipoMovimentacao[quantidadeMovimentacoes] = tipo;
+        valorMovimentacao[quantidadeMovimentacoes] = valor;
+        quantidadeMovimentacoes++;
+    }
+}
+// 1. Cadastrar contas
+void cadastrarConta() {
+    if (totalContas >= MAX_CONTAS) {
+        cout << "\n[!] Limite de 100 contas atingido!" << endl;
+        return;
+    }
+    int i = totalContas, num;
+    cout << "\n--- CADASTRO DE CONTA ---" << endl;
+        do {
+        num = lerInt("Digite o numero da conta (maior que 0): ", maiorQueZero, "O numero deve ser maior que 0!");
+        if (buscarConta(num) != -1) cout << "[!] Ja existe uma conta com esse numero." << endl;
+    } while (num <= 0 || buscarConta(num) != -1);
+        numeroConta[i] = num;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cout << "Nome do cliente: "; getline(cin, nomeCliente[i]);
+    cout << "CPF do cliente: ";  getline(cin, cpf[i]);
+        tipoConta[i] = lerInt("Tipo (1 - Corrente | 2 - Poupanca): ", tipoValido, "Digite 1 ou 2!");
+        do {
+        cout << "Saldo inicial (R$): ";
+        cin >> saldo[i];
+        if (saldo[i] < 0) cout << "[!] O saldo nao pode ser negativo!" << endl;
+    } while (saldo[i] < 0);
+    contaAtiva[i] = true;
+    totalContas++;
+    cout << "\n[V] Conta cadastrada com sucesso!" << endl;
+}
+// 2. Listar contas
+void listarContas() {
+    if (!verificarContas()) return;
+    cout << "\n--- LISTA DE CONTAS ---" << endl;
+    for (int i = 0; i < totalContas; i++) {
+        cout << "--------------------------------------\n"
+             << "Numero: " << numeroConta[i] << " | Titular: " << nomeCliente[i] << "\n"
+             << "Tipo: " << strTipo(tipoConta[i]) << " | Saldo: R$ " << saldo[i] << "\n"
+             << "Status: " << strStatus(contaAtiva[i]) << endl;
+    }
+    cout << "--------------------------------------" << endl;
+}
+// 3. Consultar conta
+void consultarConta() {
+    if (!verificarContas()) return;
+    cout << "\n--- CONSULTA DE CONTA ---" << endl;
+    int i = pedirIndiceExistente();
+    if (i == -1) return;
+    cout << "\n[ DADOS ]\nNumero: " << numeroConta[i] << "\nTitular: " << nomeCliente[i] 
+         << "\nCPF: " << cpf[i] << "\nTipo: " << strTipo(tipoConta[i]) 
+         << "\nSaldo: R$ " << saldo[i] << "\nStatus: " << strStatus(contaAtiva[i]) << endl;
+}
+// 4 e 5. Depósito e Saque unificados
+void movimentarConta(bool ehDeposito) {
+    if (!verificarContas()) return;
+    cout << "\n--- " << (ehDeposito ? "DEPOSITO" : "SAQUE") << " ---" << endl;
+    int i = pedirIndiceExistente();
+    if (i == -1) return;
+        if (!contaAtiva[i]) {
+        cout << "\n[!] Operacao nao permitida! A conta esta INATIVA." << endl;
+        return;
+    }
+    double valor;
+    cout << "Digite o valor (R$): ";
+    cin >> valor;
+    if (valor <= 0) {
+        cout << "\n[!] O valor deve ser maior que zero!" << endl;
+        return;
+    }
+    if (!ehDeposito && saldo[i] < valor) {
+        cout << "\n[!] Saldo insuficiente!" << endl;
+        return;
+    }
+    saldo[i] += (ehDeposito ? valor : -valor);
+    registrarMovimentacao(numeroConta[i], ehDeposito ? 'D' : 'S', valor);
+    cout << "\n[V] Operacao realizada com sucesso! Novo saldo: R$ " << saldo[i] << endl;
+}
+// 6. Transferência
+void transferir() {
+    if (!verificarContas(2)) return;
+    cout << "\n--- TRANSFERENCIA ---" << endl;
+    cout << "Conta de ORIGEM:\n";
+    int iOrigem = pedirIndiceExistente();
+    if (iOrigem == -1) return;
+    if (!contaAtiva[iOrigem]) {
+        cout << "\n[!] Operacao nao permitida! A conta de origem esta INATIVA." << endl;
+        return;
+    }
+        cout << "Conta de DESTINO:\n";
+    int iDestino = pedirIndiceExistente();
+    if (iDestino == -1) return;
+    if (!contaAtiva[iDestino]) {
+        cout << "\n[!] Operacao nao permitida! A conta de destino esta INATIVA." << endl;
+        return;
+    }
+    if (numeroConta[iOrigem] == numeroConta[iDestino]) {
+        cout << "\n[!] A conta de origem e destino nao podem ser a mesma!" << endl;
+        return;
+    }
+    double valor;
+    cout << "Digite o valor da transferencia (R$): ";
+    cin >> valor;
+    if (valor <= 0) {
+        cout << "\n[!] O valor da transferencia deve ser maior que zero!" << endl;
+        return;
+    }
+    if (saldo[iOrigem] < valor) {
+        cout << "\n[!] Saldo insuficiente na conta de origem para a transferencia!" << endl;
+        return;
+    }
+    if (quantidadeMovimentacoes + 2 > MAX_MOVIMENTACOES) {
+        cout << "\n[!] Limite de movimentacoes atingido!" << endl;
+        return;
+    }
+
+    saldo[iOrigem] -= valor;
+    saldo[iDestino] += valor;
+    registrarMovimentacao(numeroConta[iOrigem], 'S', valor);
+    registrarMovimentacao(numeroConta[iDestino], 'D', valor);
+    cout << "\n[V] Transferencia realizada com sucesso!" << endl;
+    cout << "Novo saldo da conta " << numeroConta[iOrigem] << ": R$ " << saldo[iOrigem] << endl;
+    cout << "Novo saldo da conta " << numeroConta[iDestino] << ": R$ " << saldo[iDestino] << endl;
+}
+// 7. Extrato
+void exibirExtrato() {
+    if (!verificarContas()) return;
+    cout << "\n--- EXTRATO ---" << endl;
+    int i = pedirIndiceExistente();
+    if (i == -1) return;
+
+    int num = numeroConta[i];
+    cout << "\n======================================" << endl;
+    cout << " EXTRATO - Conta: " << num << " | Titular: " << nomeCliente[i] << endl;
+    cout << "======================================" << endl;
+
+    bool encontrou = false;
+    for (int j = 0; j < quantidadeMovimentacoes; j++) {
+        if (contaMovimentacao[j] == num) {
+            encontrou = true;
+            cout << (tipoMovimentacao[j] == 'D' ? "Deposito: R$ " : "Saque: R$ ") << valorMovimentacao[j] << endl;
+        }
+    }
+    if (!encontrou) cout << "Nenhuma movimentacao registrada." << endl;
+    cout << "--------------------------------------\nSaldo atual: R$ " << saldo[i] << "\n======================================" << endl;
+}
+// 8. Alterar tipo
+void alterarTipo() {
+    if (!verificarContas()) return;
+    int i = pedirIndiceExistente();
+    if (i == -1) return;
+    if (!contaAtiva[i]) {
+        cout << "\n[!] Operacao nao permitida! A conta esta INATIVA." << endl;
+        return;
+    }
+    tipoConta[i] = lerInt("Novo tipo (1 - Corrente | 2 - Poupanca): ", tipoValido, "Digite 1 ou 2!");
+    cout << "\n[V] Tipo alterado com sucesso!" << endl;
+}
+// 9. Alterar status
+void alterarStatus() {
+    if (!verificarContas()) return;
+    int i = pedirIndiceExistente();
+    if (i == -1) return;
+    int esc = lerInt("Status (1 - Ativar | 0 - Desativar): ", binario, "Digite 0 ou 1!");
+    contaAtiva[i] = (esc == 1);
+    cout << "\n[V] Status alterado com sucesso!" << endl;
+}
+// Função principal
+int main() {
+    int opcao;
+    do {
+        cout << "\n======================================\n"
+             << "            BANCO.0.2 (Etapa 2)       \n"
+             << "======================================\n"
+             << "1 - Cadastrar conta\n"
+             << "2 - Listar contas\n"
+             << "3 - Consultar conta\n"
+             << "4 - Realizar deposito\n"
+             << "5 - Realizar saque\n"
+             << "6 - Realizar transferencia\n"
+             << "7 - Exibir extrato\n"
+             << "8 - Alterar tipo da conta\n"
+             << "9 - Ativar/Desativar conta\n"
+             << "10 - Sair\n"
+             << "======================================\n"
+             << "Escolha uma opcao: ";
+        cin >> opcao;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\n[!] Entrada invalida!" << endl;
+            continue;
+        }
+        switch (opcao) {
+            case 1: cadastrarConta(); break;
+            case 2: listarContas(); break;
+            case 3: consultarConta(); break;
+            case 4: movimentarConta(true); break;   // Depósito
+            case 5: movimentarConta(false); break;  // Saque
+            case 6: transferir(); break;
+            case 7: exibirExtrato(); break;
+            case 8: alterarTipo(); break;
+            case 9: alterarStatus(); break;
+            case 10: cout << "\nSaindo do BANCO.0.2 ... Ate logo!" << endl; break;
+            default: cout << "\n[!] Opcao invalida!" << endl;
+        }
+    } while (opcao != 10);
+    return 0;
+}
