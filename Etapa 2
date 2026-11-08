@@ -1,0 +1,182 @@
+// Disciplina: INF101 - Programacao de Computadores I
+// Professores: Anderson R. Lamas e Vanderlea Queiroz
+// Aluno: Luan Antonio De Oliveira Silva | Matricula: 28286
+// Trabalho Pratico - Etapa 2: Registro e Gestao de Contas Bancarias
+#include <iostream>
+#include <string>
+#include <limits>
+// Inclui a biblioteca iomanip para formatar a saída de números.//
+#include <iomanip>
+using namespace std;
+//variaveis
+const int MAX_CONTAS = 100;
+int numeroConta[MAX_CONTAS];
+string nomeCliente[MAX_CONTAS];
+string cpf[MAX_CONTAS];
+int tipoConta[MAX_CONTAS];
+double saldo[MAX_CONTAS];
+bool contaAtiva[MAX_CONTAS];
+int quantidadeContas = 0;
+//variaveis para movimentacoes
+const int MAX_MOVIMENTACOES = 500;
+int contaMovimentacao[MAX_MOVIMENTACOES];
+char tipoMovimentacao[MAX_MOVIMENTACOES];   // D = deposito | S = saque
+double valorMovimentacao[MAX_MOVIMENTACOES];
+int quantidadeMovimentacoes = 0;
+// Le um numero sem travar se o usuario digitar letras
+double lerNum(string msg) {
+    double v;
+    cout << msg;
+    // Loop para ler um número válido do usuário. Se a entrada não for um número, o loop continua até que uma entrada válida seja fornecida.//
+    while (!(cin >> v)) {
+        cin.clear();
+        // Limpa o buffer do cin antes de ler strings.//
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "[!] Entrada invalida! " << msg;
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return v;
+}
+// Retorna o indice da conta ou -1
+int buscarConta(int numero) {
+    for (int i = 0; i < quantidadeContas; i++)
+        if (numeroConta[i] == numero) return i;
+    return -1;
+}
+// Pede o numero da conta; retorna o indice ou -1 (nao existe / inativa, se exigida)
+int pedirConta(string msg, bool exigeAtiva) {
+    int i = buscarConta((int)lerNum(msg));
+    if (i == -1) cout << "[!] Conta nao encontrada!\n";
+    else if (exigeAtiva && !contaAtiva[i]) { cout << "[!] Conta INATIVA!\n"; return -1; }
+    return i;
+}
+// Le um valor e avisa se nao for positivo
+double lerValor(string msg) {
+    double v = lerNum(msg);
+    if (v <= 0) cout << "[!] O valor deve ser maior que zero!\n";
+    return v;
+}
+// Garante espaco para n novas movimentacoes
+bool temEspaco(int n) {
+    if (quantidadeMovimentacoes + n > MAX_MOVIMENTACOES) {
+        cout << "[!] Limite de movimentacoes atingido!\n";
+        return false;
+    }
+    return true;
+}
+// Registra uma movimentacao (deposito ou saque)
+void registrarMovimentacao(int conta, char tipo, double valor) {
+    contaMovimentacao[quantidadeMovimentacoes] = conta;
+    tipoMovimentacao[quantidadeMovimentacoes] = tipo;
+    valorMovimentacao[quantidadeMovimentacoes] = valor;
+    quantidadeMovimentacoes++;
+}
+// Funcoes de operacoes bancarias.//
+void cadastrarConta() {
+    if (quantidadeContas >= MAX_CONTAS) { cout << "[!] Limite de contas atingido!\n"; return; }
+    int i = quantidadeContas, num;
+    do {
+        num = (int)lerNum("Numero da conta (maior que 0): ");
+        if (num <= 0) cout << "[!] O numero deve ser maior que 0!\n";
+        else if (buscarConta(num) != -1) cout << "[!] Ja existe uma conta com esse numero.\n";
+    } while (num <= 0 || buscarConta(num) != -1);
+    numeroConta[i] = num;
+    cout << "Nome do cliente: "; getline(cin, nomeCliente[i]);
+    cout << "CPF do cliente: ";  getline(cin, cpf[i]);
+    do tipoConta[i] = (int)lerNum("Tipo (1 - Corrente | 2 - Poupanca): ");
+    while (tipoConta[i] != 1 && tipoConta[i] != 2);
+    do {
+        saldo[i] = lerNum("Saldo inicial (R$): ");
+        if (saldo[i] < 0) cout << "[!] O saldo nao pode ser negativo!\n";
+    } while (saldo[i] < 0);
+    contaAtiva[i] = true;
+    quantidadeContas++;
+    cout << "[V] Conta cadastrada com sucesso!\n";
+}
+void listarContas() {
+    if (quantidadeContas == 0) { cout << "[!] Nenhuma conta cadastrada.\n"; return; }
+    for (int i = 0; i < quantidadeContas; i++)
+        cout << "--------------------------------------\n"
+             << "Numero: " << numeroConta[i] << " | Titular: " << nomeCliente[i] << "\n"
+             << "Tipo: " << (tipoConta[i] == 1 ? "Corrente" : "Poupanca") << " | Saldo: R$ " << saldo[i]
+             << " | " << (contaAtiva[i] ? "Ativa" : "Inativa") << endl;
+}
+void consultarConta() {
+    int i = pedirConta("Numero da conta: ", false);
+    if (i == -1) return;
+    cout << "Numero: " << numeroConta[i] << "\nTitular: " << nomeCliente[i] << "\nCPF: " << cpf[i]
+         << "\nTipo: " << (tipoConta[i] == 1 ? "Corrente" : "Poupanca") << "\nSaldo: R$ " << saldo[i]
+         << "\nStatus: " << (contaAtiva[i] ? "Ativa" : "Inativa") << endl; }
+void depositar() {
+    int i = pedirConta("Numero da conta: ", true);
+    if (i == -1) return;
+    double valor = lerValor("Valor do deposito (R$): ");
+    if (valor <= 0 || !temEspaco(1)) return;
+    saldo[i] = saldo[i] + valor;
+    registrarMovimentacao(numeroConta[i], 'D', valor);
+    cout << "[V] Deposito realizado! Novo saldo: R$ " << saldo[i] << endl; }
+void sacar() {
+    // Pede a conta de origem e verifica se existe e esta ativa
+    int i = pedirConta("Numero da conta: ", true);
+    if (i == -1) return;
+    double valor = lerValor("Valor do saque (R$): ");
+    if (valor <= 0) return;
+    if (saldo[i] < valor) { cout << "[!] Saldo insuficiente!\n"; return; }
+    if (!temEspaco(1)) return;
+    saldo[i] = saldo[i] - valor;
+    // Registra a movimentacao de saque
+    registrarMovimentacao(numeroConta[i], 'S', valor);
+    cout << "[V] Saque realizado! Novo saldo: R$ " << saldo[i] << endl; }
+// Funcoes de verificacao e alteracao de saldo, tipo e status.//
+void transferir() {
+    int o = pedirConta("Conta de ORIGEM: ", true);
+    if (o == -1) return;
+    int d = pedirConta("Conta de DESTINO: ", true);
+    if (d == -1) return;
+    if (o == d) { cout << "[!] Origem e destino nao podem ser a mesma conta!\n"; return; }
+    double valor = lerValor("Valor da transferencia (R$): ");
+    if (valor <= 0) return;
+    if (saldo[o] < valor) { cout << "[!] Saldo insuficiente na origem!\n"; return; }
+    if (!temEspaco(2)) return;   // espaco para os dois registros
+    saldo[o] = saldo[o] - valor;
+    saldo[d] = saldo[d] + valor;
+    // Registra as movimentacoes de saque e deposito
+    registrarMovimentacao(numeroConta[o], 'S', valor);
+    registrarMovimentacao(numeroConta[d], 'D', valor);
+    cout << "[V] Transferencia realizada!\nSaldo conta " << numeroConta[o] << ": R$ " << saldo[o]
+         << "\nSaldo conta " << numeroConta[d] << ": R$ " << saldo[d] << endl; }
+// Funcoes de alteracao de tipo e status da conta.//
+void exibirExtrato() {
+    int i = pedirConta("Numero da conta: ", false);
+    if (i == -1) return;
+    cout << "===== EXTRATO - Conta " << numeroConta[i] << " | " << nomeCliente[i] << " =====\n";
+    bool achou = false;
+    for (int j = 0; j < quantidadeMovimentacoes; j++) {
+        if (contaMovimentacao[j] != numeroConta[i]) continue;
+        achou = true;
+        cout << (tipoMovimentacao[j] == 'D' ? "Deposito: R$ " : "Saque: R$ ") << valorMovimentacao[j] << endl; }
+    if (!achou) cout << "Nenhuma movimentacao registrada.\n";
+    cout << "Saldo atual: R$ " << saldo[i] << endl; }
+// Funcoes de alteracao de tipo e status da conta.//
+int main() {
+    cout << fixed << setprecision(2);
+    int opcao;
+    do {
+        cout << "\n======== BANCO.0.2 ========\n"
+             << "1 - Cadastrar conta\n2 - Listar contas\n3 - Consultar conta\n4 - Depositar\n"
+             << "5 - Sacar\n6 - Transferir\n7 - Extrato\n8 - Sair\n";
+        opcao = (int)lerNum("Escolha uma opcao: ");
+        // Funcoes de operacoes bancarias.//
+        switch (opcao) {
+            case 1: cadastrarConta(); break;
+            case 2: listarContas(); break;
+            case 3: consultarConta(); break;
+            case 4: depositar(); break;
+            case 5: sacar(); break;
+            case 6: transferir(); break;
+            case 7: exibirExtrato(); break;
+            case 8: cout << "Saindo... Ate logo!\n"; break;
+            default: cout << "[!] Opcao invalida!\n";
+        }
+    } while (opcao != 8);
+    return 0; }
